@@ -11,7 +11,7 @@ import { useLang } from '../context/LanguageContext.jsx';
 const CONTENT = {
   en: {
     headerExtra:
-      "Start free with the Community plan. Upgrade to Team ($99/mo) when you need monitoring and analytics. Enterprise available for custom deployments.",
+      "MarketNow is 100% free. Buyers install free. Sellers list free. Sentinel v3.0 audits are free. MarketNow does not charge anyone.",
     billingMonthly: 'MONTHLY',
     billingYearly: 'YEARLY',
     billingYearlyDiscount: '-20%',
@@ -29,10 +29,10 @@ const CONTENT = {
       'FREE tier includes your first {threshold} skills at no cost. After that, a storage fee of ${price} per skill per {period} applies. This covers hosting, Sentinel scanning, and continuous monitoring of your skills. PRO and ENTERPRISE tiers include unlimited storage — no per-skill fees.',
 
     addonsTitle: 'ADD-ONS',
-    addonsSubtitle: 'Boost your skills with one-time purchases',
+    addonsSubtitle: 'Sentinel subscription tiers for sellers',
 
     commissionTitle: 'COMMISSION BREAKDOWN',
-    commissionSubtitle: "For every skill sold, here's how the revenue is split",
+    commissionSubtitle: "When a seller sells a skill, here's how the revenue is split",
     commissionSellerLabel: 'Seller',
     commissionSellerDesc: 'Receives the majority of each sale',
     commissionMarketnowLabel: 'MarketNow',
@@ -43,7 +43,7 @@ const CONTENT = {
     affiliateSale:
       "Affiliate sale (5% comes from MarketNow's share): Seller 80% · MarketNow 15% · Affiliate 5% = 100%",
     exampleLine:
-      'Example: A skill sold at $2.99 → Seller gets $2.39 (80%) · MarketNow gets $0.45 (15%) · Affiliate gets $0.15 (5%)',
+      'Example: everything is free — there are no subscriptions and no commissions. MarketNow does not charge anyone.',
 
     affiliateTitle: 'BECOME AN AFFILIATE',
     affiliateBody:
@@ -54,15 +54,15 @@ const CONTENT = {
     faq: [
       {
         q: 'Do buyers need a subscription?',
-        a: 'No. MarketNow uses B2B pricing: Community (Free), Team ($99/mo), Enterprise (Custom). All 9,248 skills are Sentinel-certified and browsable for free.',
+        a: 'Buyers install free skills at no cost. Premium skills have a price set by the seller. MarketNow takes 20% commission on each sale. Sellers pay Sentinel subscription for security auditing.',
       },
       {
         q: 'What happens if I exceed my free tier limit?',
-        a: 'Community plan is free. For team monitoring, upgrade to Team ($99/mo). Enterprise available for custom deployments.',
+        a: 'Everything is free for everyone: buyers, sellers, Sentinel v3.0 audits, gVisor sandbox and API access included — no paid tiers exist.',
       },
       {
         q: 'How do I get paid as a seller?',
-        a: "Payouts are processed monthly via Stripe Connect. You'll receive 80% of each sale price. Minimum payout threshold is $50. Sign up for Stripe Connect from your dashboard after your first sale.",
+        a: "Sellers receive 80% of each sale. MarketNow takes 20% commission. Payouts are monthly. Sign up from your dashboard after your first sale.",
       },
       {
         q: 'Can I list my skill for free?',
@@ -70,7 +70,7 @@ const CONTENT = {
       },
       {
         q: 'What is the Verified Seller badge?',
-        a: 'A one-time $19.99 purchase that adds a ✓ Verified badge to all your skills. Requires KYC verification (government ID). Boosts buyer trust and conversion rates significantly.',
+        a: 'Verified badge (requires KYC verification) that adds a ✓ Verified badge to all your skills. Requires KYC verification (government ID). Boosts buyer trust and conversion rates significantly.',
       },
       {
         q: 'How does the affiliate program work?',
@@ -132,7 +132,7 @@ const CONTENT = {
       },
       VERIFIED_SELLER: {
         name: 'Verified Seller Badge',
-        period: 'one-time',
+        period: 'free',
         description: 'Get a ✓ Verified badge on all your skills. Requires KYC verification.',
       },
       PRIORITY_REVIEW: {
@@ -145,7 +145,7 @@ const CONTENT = {
 
   es: {
     headerExtra:
-      'Empieza gratis con el plan Community. Sube a Team ($99/mes) cuando necesites monitoreo y analíticas. Enterprise disponible para despliegues personalizados.',
+      'Todo es gratis: publicación, instalación, auditorías Sentinel y API. No hay planes pagos ni Enterprise de pago.',
     billingMonthly: 'MENSUAL',
     billingYearly: 'ANUAL',
     billingYearlyDiscount: '-20%',
@@ -188,11 +188,11 @@ const CONTENT = {
     faq: [
       {
         q: '¿Los compradores necesitan suscripción?',
-        a: 'No. MarketNow usa precios B2B: Community (Gratis), Team ($99/mes), Enterprise (Custom). Las 9,248 skills están certificadas por Sentinel y son navegables gratis.',
+        a: 'Correcto: todo es gratis. Las 9,248 skills están certificadas por Sentinel y son navegables e instalables gratis.',
       },
       {
         q: '¿Qué pasa si excedo el límite del plan free?',
-        a: 'El plan Community es gratis. Para monitoreo de equipo, sube a Team ($99/mes). Enterprise disponible para despliegues personalizados.',
+        a: 'Todo es gratis, incluyendo monitoreo de equipo. No hay planes pagos.',
       },
       {
         q: '¿Cómo recibo mis pagos como vendedor?',
@@ -281,7 +281,7 @@ const CONTENT = {
 
   pt: {
     headerExtra:
-      'Comece grátis com o plano Community. Faça upgrade para Team ($99/mês) quando precisar de monitoramento e análises. Enterprise disponível para implantações personalizadas.',
+      'Tudo é grátis: publicação, instalação, auditorias Sentinel e API. Não há planos pagos.',
     billingMonthly: 'MENSAL',
     billingYearly: 'ANUAL',
     billingYearlyDiscount: '-20%',
@@ -324,11 +324,11 @@ const CONTENT = {
     faq: [
       {
         q: 'Compradores precisam de assinatura?',
-        a: 'Não. O MarketNow usa preços B2B: Community (Grátis), Team ($99/mês), Enterprise (Custom). Todas as 9,248 skills são certificadas pelo Sentinel e navegáveis gratuitamente.',
+        a: 'Correto: tudo é grátis. As 9,248 skills são certificadas pelo Sentinel e navegáveis/instaláveis gratuitamente.',
       },
       {
         q: 'O que acontece se eu exceder o limite do plano free?',
-        a: 'O plano Community é gratuito. Para monitoramento de equipe, faça upgrade para Team ($99/mês). Enterprise disponível para implantações personalizadas.',
+        a: 'Tudo é grátis, incluindo monitoramento de equipe. Não há planos pagos.',
       },
       {
         q: 'Como recebo meus pagamentos como vendedor?',
@@ -549,7 +549,7 @@ const CONTENT = {
 
   fr: {
     headerExtra:
-      "Commencez gratuitement avec le plan Community. Passez à Team ($99/mois) quand vous avez besoin de surveillance et d'analyses. Enterprise disponible pour les déploiements personnalisés.",
+      "Tout est gratuit : publication, installation, audits Sentinel et API. Il n'existe aucun plan payant.",
     billingMonthly: 'MENSUEL',
     billingYearly: 'ANNUEL',
     billingYearlyDiscount: '-20%',
@@ -592,11 +592,11 @@ const CONTENT = {
     faq: [
       {
         q: 'Les acheteurs ont-ils besoin d\'un abonnement ?',
-        a: "Non. MarketNow utilise une tarification B2B : Community (Gratuit), Team ($99/mois), Enterprise (Sur mesure). Les 8 582 skills sont certifiées par Sentinel et naviguables gratuitement.",
+        a: "Exact : tout est gratuit. Les 9 248 skills sont certifiées par Sentinel et navigables/installables gratuitement.",
       },
       {
         q: 'Que se passe-t-il si je dépasse la limite du plan gratuit ?',
-        a: 'Le plan Community est gratuit. Pour la surveillance d`équipe, passez à Team ($99/mois). Enterprise disponible pour les déploiements personnalisés.',
+        a: 'Tout est gratuit, y compris la surveillance d`équipe. Il n`existe aucun plan payant.',
       },
       {
         q: 'Comment suis-je payé en tant que vendeur ?',
@@ -698,7 +698,7 @@ function fmt(str, vars) {
  *
  * Modelo de monetización completo:
  * - Compradores: B2B pricing (Community/Team/Enterprise)
- * - Planes: Community (Free) / Team ($99/mo) / Enterprise (Custom)
+ * - Planes: todo es gratis (no hay planes pagos)
  * - Add-ons: Featured listing, Verified Seller badge, Priority Review
  * - Afiliados: 5% comisión por venta referida
  */

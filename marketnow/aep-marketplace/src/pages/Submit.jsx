@@ -32,7 +32,7 @@ const CATEGORIES = [
 // Price tier canonical labels (kept English here); translated at render time
 // via CONTENT[lang].tierLabels / tierDescs.
 const PRICE_TIERS = [
-  { price: 0.99, label: 'Utility', desc: 'Single-function MCP servers, simple wrappers' },
+  { price: 0, label: 'Free', desc: 'Free skills install at no cost. Premium skills have a price set by the seller' },
   { price: 1.99, label: 'Standard', desc: 'Standard integrations, one API/service' },
   { price: 2.99, label: 'Multi-feature', desc: 'Multi-feature tools, common choice' },
   { price: 4.99, label: 'Sophisticated', desc: 'Multi-endpoint, complex logic' },
@@ -660,7 +660,7 @@ export default function Submit() {
           slug: repoData.name.toLowerCase().replace(/[^a-z0-9-]/g, '-'),
           description: repoData.description || '',
           author: owner,
-          install: `npx -y @marketnow/install ${repoData.name.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`,
+          install: `npx -y marketnow-install-stack ${repoData.name.toLowerCase().replace(/[^a-z0-9-]/g, '-')}`,
         }));
         setStep(2);
       }

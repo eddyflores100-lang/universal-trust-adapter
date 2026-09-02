@@ -2,23 +2,20 @@
  * MarketNow — Monetization System
  * =================================
  *
- * Modelo de revenue completo:
+ * MODELO ACTUAL (2026-09-03): TODO ES FREE.
  *
  * 1. COMPRADORES (agents + humans):
- *    - Pagan el precio de cada skill ($0.99 - $9.99)
- *    - MarketNow cobra 20% comisión al vendedor
+ *    - Todas las skills son gratuitas. Sin pagos, sin suscripciones.
  *
  * 2. VENDEDORES (sellers):
- *    - FREE TIER: hasta 3 skills gratis
- *    - PRO TIER: $9.99/mes → hasta 25 skills + featured badge + analytics
- *    - ENTERPRISE: $49.99/mes → unlimited + API + priority review
- *    - STORAGE FEE: $0.50 por skill/mes después del free tier
- *    - FEATURED LISTING: $4.99 por 30 días (boost en búsquedas)
- *    - VERIFIED SELLER: $19.99 one-time (badge + trust boost)
+ *    - Publicación ilimitada y gratuita.
+ *    - Sentinel audits gratuitos.
+ *    - Sin comisiones, sin storage fees, sin addons pagos.
  *
  * 3. AFILIADOS:
- *    - 5% comisión por venta referida
- *    - Payout mensual vía Stripe Connect (min $50)
+ *    - No hay programa de afiliados: no hay nada que comprar.
+ *
+ * Las constantes de precio se mantienen en 0 por compatibilidad de la UI.
  */
 
 export const TIERS = {
@@ -79,7 +76,7 @@ export const ADDONS = {
   VERIFIED_SELLER: {
     name: 'Verified Seller Badge',
     price: 0,
-    period: 'one-time',
+    period: 'free',
     description: 'Get a ✓ Verified badge on all your skills. Requires KYC verification.',
   },
   PRIORITY_REVIEW: {
