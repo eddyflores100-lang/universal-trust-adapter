@@ -213,7 +213,7 @@ export const TRANSLATIONS = {
     'home.forDevsTitle': 'For Developers',
     'home.forDevsDesc': 'The fastest way to add a capability to your agent stack.',
     'home.step1Title': '1. Search',
-    'home.step1Desc': 'Browse 9,248 MCP servers by category, tag, or keyword. Filter by price, sentinel score, or language. See real GitHub stars, real npm downloads, real Sentinel reports.',
+    'home.step1Desc': 'Browse 9,248 MCP skills by category, tag, or keyword. Filter by price, sentinel score, or language. See real GitHub stars, real npm downloads, real Sentinel reports.',
     'home.step2Title': '2. Pay (or grab free)',
     'home.step2Desc': 'Credit card via Stripe (full chargeback rights) or USDC on Base L2 via x402. {count} skills are free — no payment, no signup. Just install.',
     'home.step3Title': '3. Install',

@@ -43,7 +43,7 @@ npx -y marketnow-mcp
 - submit_skill, recommend_skills
 
 ## Key facts
-- 9,248 MCP servers (all from GitHub repos, 0 synthetic)
+- 9,248 MCP skills (all from GitHub repos, 0 synthetic)
 - 10-layer security audit (Sentinel): L1.5 metadata → L1.9 prompt injection → L2 sandbox → L3 continuous monitoring
 - 28 malware family signatures (Emotet, LockBit, Cobalt Strike, etc.)
 - 32 prompt injection defense rules (the #1 attack against AI agents)

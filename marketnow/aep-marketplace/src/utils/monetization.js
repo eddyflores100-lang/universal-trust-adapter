@@ -26,9 +26,9 @@ export const TIERS = {
     name: 'FREE',
     price: 0,
     period: 'forever',
-    maxSkills: 3,
+    maxSkills: Infinity,
     features: [
-      'Up to 3 skills listed',
+      'Unlimited free listings',
       'Basic Sentinel L1 scan',
       'Standard review queue (24-48h)',
       'Community support',
@@ -37,11 +37,11 @@ export const TIERS = {
   },
   PRO: {
     name: 'PRO',
-    price: 9.99,
+    price: 0,
     period: 'month',
-    maxSkills: 25,
+    maxSkills: Infinity,
     features: [
-      'Up to 25 skills listed',
+      'Unlimited free listings',
       'Priority Sentinel scan (< 6h)',
       'Featured badge on listings',
       'Analytics dashboard',
@@ -52,7 +52,7 @@ export const TIERS = {
   },
   ENTERPRISE: {
     name: 'ENTERPRISE',
-    price: 49.99,
+    price: 0,
     period: 'month',
     maxSkills: Infinity,
     features: [
@@ -72,33 +72,33 @@ export const TIERS = {
 export const ADDONS = {
   FEATURED_LISTING: {
     name: 'Featured Listing',
-    price: 4.99,
+    price: 0,
     period: '30 days',
     description: 'Boost your skill to the top of search results and the homepage featured section.',
   },
   VERIFIED_SELLER: {
     name: 'Verified Seller Badge',
-    price: 19.99,
+    price: 0,
     period: 'one-time',
     description: 'Get a ✓ Verified badge on all your skills. Requires KYC verification.',
   },
   PRIORITY_REVIEW: {
     name: 'Priority Review',
-    price: 2.99,
+    price: 0,
     period: 'per skill',
     description: 'Skip the queue. Your skill is reviewed within 6 hours instead of 24-48h.',
   },
 };
 
 export const COMMISSION = {
-  seller: 0.80,    // Seller keeps 80%
-  marketnow: 0.20, // MarketNow takes 20% (15% when affiliate is used)
-  affiliate: 0.05, // Affiliate gets 5% (deducted from MarketNow's share, not seller's)
+  seller: 1.00,    // Seller keeps 100% (nothing is charged)
+  marketnow: 0.00, // MarketNow charges nothing
+  affiliate: 0.00, // No affiliate program (nothing to buy)
 };
 
 export const STORAGE_FEE = {
-  freeThreshold: 3,    // First 3 skills free
-  pricePerSkill: 0.50, // $0.50 per skill per month after threshold
+  freeThreshold: Infinity, // unlimited free listings
+  pricePerSkill: 0, // moot: nothing is charged
   period: 'month',
 };
 
@@ -162,7 +162,7 @@ export function calculateAffiliatePayout(priceUsd) {
 
 /**
  * Get the user's current tier from localStorage.
- * In production, this would come from the backend (Stripe subscription status).
+ * In production, this would come from the backend. Everything is free — no Stripe.
  */
 export function getUserTier() {
   try {
@@ -228,7 +228,7 @@ export function isSkillFeatured(skillId) {
 }
 
 /**
- * Feature a skill for 30 days (after payment).
+ * Feature a skill for 30 days (free).
  */
 export function featureSkill(skillId) {
   try {
