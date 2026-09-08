@@ -4,9 +4,89 @@
 // 
 // UPDATED: 2026-08-21 — Reflects UTA v1.0.0 with 8 adapters, 12-stage
 // pipeline, real cryptographic verification, and all P0-P10 features.
+// UPDATED: 2026-09-08 — verifyATCv3 now performs REAL Ed25519 signature
+//   verification (was structure-only: schema/domain/lifecycle). Found via the
+//   multichannel evidence harness requested by CodePass.dev — a tampered ATC
+//   signed by an unknown CA was being accepted as valid, violating the
+//   documented golden rule (UNKNOWN = DENY). Trust anchor semantics:
+//   callers may supply body.ca_public_key (their own anchor); otherwise ONLY
+//   the MarketNow registry CA (mn-ca-003) is trusted, and unknown anchors
+//   fail closed. Same canonicalization as api/atc.js (RFC 8785 JCS, inline).
+// UPDATED: 2026-09-08 (b) — 3 fixes for the live tool pages:
+//   1. jwtToUTS/verifyJWT no longer crash on raw claims objects (undefined
+//      .split('.') was causing FUNCTION_INVOCATION_FAILED 500s on
+//      /api/trust?action=translate with from=jwt).
+//   2. verify response enriched with decision/stages/detected_format/
+//      issuer/failed_stage so /playground.html can render the real 12-stage
+//      fail-closed pipeline.
+//   3. handleTrust POST wrapped in try/catch — runtime errors now return
+//      clean JSON 500s instead of opaque FUNCTION_INVOCATION_FAILED.
 // ============================================================================
 
+import { createPrivateKey, createPublicKey, sign as edSign, verify as edVerify } from 'node:crypto';
+
+// MarketNow registry CA (mn-ca-003, active since 2026-09-08; see /api/atc?action=ca-key)
+const MARKETNOW_CA = {
+  key_id: 'mn-ca-003',
+  spki_b64: 'MCowBQYDK2VwAyEAUWJgyMWp9oKIGwN9EG8ayz/mYYp1lcQBI58rtpOs8CM=',
+  active_since: '2026-09-08',
+};
+
+// OPTIONAL server-side signing key for translate→atc-v3 (env var, never committed).
+// When CA_PRIVATE_KEY_PEM (PEM, Ed25519) is present, translated ATC v3 cards are
+// issued with a REAL signature that verifies against mn-ca-003 — so the
+// "Translate → Verify in Playground" handoff ends in PERMIT. Without the env
+// var the placeholder signature is kept (and verification fails honestly).
+let CA_SIGNING_KEY = null;
+try {
+  const pem = process.env.CA_PRIVATE_KEY_PEM || '';
+  if (pem.includes('BEGIN PRIVATE KEY')) CA_SIGNING_KEY = createPrivateKey(pem);
+} catch { CA_SIGNING_KEY = null; }
+
+// RFC 8785 JCS (JSON Canonicalization Scheme) — inline, no dependencies.
+// Identical to api/atc.js (kept in sync deliberately).
+function jcs(o) {
+  if (o === null) return 'null';
+  switch (typeof o) {
+    case 'boolean': return o ? 'true' : 'false';
+    case 'number': return Number.isFinite(o) ? String(o) : 'null';
+    case 'string': return JSON.stringify(o);
+  }
+  if (Array.isArray(o)) return '[' + o.map(jcs).join(',') + ']';
+  const keys = Object.keys(o).filter((k) => o[k] !== undefined).sort();
+  return '{' + keys.map((k) => JSON.stringify(k) + ':' + jcs(o[k])).join(',') + '}';
+}
+
+// Real Ed25519 verification of an ATC v3 credential.
+// Signed payload = credential WITHOUT the signatures array; signing bytes =
+// 'UTA-ATC-V3-CREDENTIAL:' + JCS(payload) — identical to @marketnow/trust-core.
+function verifyAtcV3Signature(cred, trustAnchorPem) {
+  try {
+    const { signatures, ...payload } = cred;
+    const sig = cred.signatures?.[0];
+    if (!sig?.value) return { ok: false, err: 'signature value missing' };
+    const sigBuf = Buffer.from(String(sig.value), 'hex');
+    if (sigBuf.length !== 64) return { ok: false, err: 'signature is not 64 bytes (128 hex chars)' };
+    const signingBytes = Buffer.from('UTA-ATC-V3-CREDENTIAL:' + jcs(payload), 'utf-8');
+    const pub = createPublicKey({ key: trustAnchorPem, format: 'pem' });
+    return { ok: edVerify(null, signingBytes, pub, sigBuf) };
+  } catch (e) {
+    return { ok: false, err: String(e && e.message ? e.message : e) };
+  }
+}
+
+function spkiToPem(spkiB64) {
+  return '-----BEGIN PUBLIC KEY-----\n' + spkiB64 + '\n-----END PUBLIC KEY-----';
+}
+
 export async function handleTrust(req, res) {
+  // CORS: public, key-less trust API — open to browser clients, third-party
+  // tooling and the live demo widgets on /uta and /playground.html.
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(204).end();
+
   if (req.method === 'GET') {
     const action = req.query.action;
     
@@ -146,10 +226,30 @@ export async function handleTrust(req, res) {
 
       const detected = detectFormat(payload);
       if (!detected.format) {
-        return res.status(200).json({ valid: false, format: 'unknown', issues: ['Could not detect format'], warnings: [] });
+        return res.status(200).json({
+          valid: false,
+          format: 'unknown',
+          issues: ['Could not detect format'],
+          warnings: [],
+          // Enriched fields (playground UI)
+          detected_format: 'unknown',
+          decision: 'DENY',
+          issuer: 'unknown',
+          failed_stage: 'DETECT',
+          stages: buildStageBreakdown({ format: null, confidence: 0 }, { valid: false, issues: ['Could not detect format'], warnings: [] }),
+        });
       }
 
       const result = verifyByFormat(detected.format, payload, ca_public_key);
+      // Enriched fields for the Verify Playground UI (additive only —
+      // existing consumers of valid/format/issues are unaffected).
+      result.detected_format = result.format || detected.format;
+      result.decision = result.valid ? 'PERMIT' : 'DENY';
+      result.issuer = result.uts?.trust?.assessor || 'unknown';
+      result.stages = buildStageBreakdown(detected, result);
+      result.failed_stage = (result.stages.find(s => s.status === 'FAIL') || {}).name || null;
+      result.golden_rule = 'UNKNOWN = DENY, ERROR = DENY, EXPIRED = DENY, REVOKED = DENY';
+      result.checked_at = new Date().toISOString();
       return res.status(200).json(result);
     }
 
@@ -297,6 +397,17 @@ export async function handleTrust(req, res) {
 // ============================================================================
 
 function detectFormat(payload) {
+  // FIX 2026-09-08: string payloads (raw JWT / PEM) are now detected instead of
+  // being rejected as "not an object" (the x509 PEM branch below was unreachable).
+  if (typeof payload === 'string') {
+    const s = payload.trim();
+    if (s.includes('-----BEGIN CERTIFICATE-----')) return { format: 'x509', confidence: 0.99 };
+    const parts = s.split('.');
+    if (parts.length === 3 && /^[A-Za-z0-9_-]+$/.test(parts[0]) && /^[A-Za-z0-9_-]+$/.test(parts[1])) {
+      return { format: 'jwt', confidence: 0.95 };
+    }
+    return { format: null, confidence: 0 };
+  }
   if (!payload || typeof payload !== 'object') return { format: null, confidence: 0 };
 
   // ATC v3: has atc_version starting with 3. + signatures[]
@@ -425,17 +536,26 @@ function atcV3ToUTS(cred) {
 
 function utsToATCv3(uts) {
   const id = `ATC-${new Date().getFullYear()}-${Math.random().toString(36).slice(2, 9).toUpperCase()}`;
-  return {
+  const card = {
     atc_version: '3.0.0',
     credential_id: id,
-    issuer: { did: 'did:marketnow:ca', name: uts.trust.assessor || 'MarketNow', url: 'https://marketnow.site', ca_key_id: uts.identity?.key_id || '' },
+    issuer: { did: 'did:marketnow:ca', name: uts.trust.assessor || 'MarketNow', url: 'https://marketnow.site', ca_key_id: MARKETNOW_CA.key_id },
     subject: { agent_id: uts.subject.id, agent_name: uts.subject.name, public_key: uts.identity?.public_key || '', key_algorithm: uts.identity?.key_algorithm || 'Ed25519', subject_type: 'agent' },
     attestations: [],
     capabilities: { provides: uts.capabilities?.provides || [], requires: uts.capabilities?.requires || [], protocols: uts.capabilities?.protocols || ['mcp'] },
     lifecycle: { issued_at: uts.lifecycle.issued_at || new Date().toISOString(), expires_at: uts.lifecycle.expires_at, revoked: false, revocation_url: `https://marketnow.site/api/atc?action=verify&card_id=${id}`, version: '3.0.0' },
     assessment: { methodology: 'Sentinel', methodology_version: 'v2.5', score: uts.trust.score, confidence: uts.trust.confidence, risk_level: uts.trust.confidence === 'high' ? 'low' : 'medium', computed_at: new Date().toISOString(), computed_by: uts.trust.assessor || 'MarketNow' },
-    signatures: [{ algorithm: 'Ed25519 (RFC 8032)', value: '00'.repeat(64), signed_by: uts.trust.assessor || 'MarketNow', signed_at: new Date().toISOString(), domain: 'UTA-ATC-V3-CREDENTIAL', key_id: uts.identity?.key_id || '', canonicalization: 'RFC_8785_JCS', evidence_hash: 'sha256:pending' }],
   };
+  // Real signature when the server holds the CA key (env CA_PRIVATE_KEY_PEM).
+  // Same scheme the verifier uses: 'UTA-ATC-V3-CREDENTIAL:' + JCS(card).
+  let sigValue = '00'.repeat(64);
+  if (CA_SIGNING_KEY) {
+    try {
+      sigValue = edSign(null, Buffer.from('UTA-ATC-V3-CREDENTIAL:' + jcs(card), 'utf-8'), CA_SIGNING_KEY).toString('hex');
+    } catch { sigValue = '00'.repeat(64); }
+  }
+  card.signatures = [{ algorithm: 'Ed25519 (RFC 8032)', value: sigValue, signed_by: MARKETNOW_CA.key_id, signed_at: new Date().toISOString(), domain: 'UTA-ATC-V3-CREDENTIAL', key_id: MARKETNOW_CA.key_id, canonicalization: 'RFC_8785_JCS', evidence_hash: CA_SIGNING_KEY ? 'sha256:' + sigValue.slice(0, 16) : 'sha256:pending' }];
+  return card;
 }
 
 function verifyATCv3(cred, caKey) {
@@ -446,10 +566,29 @@ function verifyATCv3(cred, caKey) {
   if (sig.domain !== 'UTA-ATC-V3-CREDENTIAL') issues.push(`wrong domain: ${sig.domain}`);
   if (cred.lifecycle?.expires_at && new Date(cred.lifecycle.expires_at) < new Date()) issues.push('expired');
   if (cred.lifecycle?.revoked) issues.push('revoked');
-  // Note: real Ed25519 verification requires the CA private key + crypto module
-  // The UTA package (@marketnow/trust-core) provides full crypto verification
+
+  // FIX 2026-09-08: REAL Ed25519 signature verification (was structure-only).
+  // Trust anchor: explicit body.ca_public_key (caller-supplied), else the
+  // MarketNow registry CA. Unknown anchors fail closed (UNKNOWN = DENY).
+  let trustAnchorPem = null;
+  let trustAnchorId = null;
+  if (caKey && typeof caKey === 'string' && caKey.includes('BEGIN')) {
+    trustAnchorPem = caKey;
+    trustAnchorId = 'caller-supplied';
+  } else {
+    trustAnchorPem = spkiToPem(MARKETNOW_CA.spki_b64);
+    trustAnchorId = MARKETNOW_CA.key_id;
+    if (sig.key_id && !String(sig.key_id).includes(MARKETNOW_CA.key_id)) {
+      issues.push(`unknown CA trust anchor: signature key_id "${sig.key_id}" is not the MarketNow registry CA (${MARKETNOW_CA.key_id}). To verify a credential from your own CA, pass ca_public_key (PEM) in the request body.`);
+    }
+  }
+  const sigCheck = verifyAtcV3Signature(cred, trustAnchorPem);
+  if (!sigCheck.ok) {
+    issues.push(`Ed25519 signature verification failed against ${trustAnchorId}${sigCheck.err ? ' (' + sigCheck.err + ')' : ''}`);
+  }
+
   if (sig.value === '00'.repeat(64)) warnings.push('signature is placeholder — use @marketnow/trust-core for real verification');
-  return { valid: issues.length === 0, format: 'atc-v3', uts: atcV3ToUTS(cred), issues, warnings };
+  return { valid: issues.length === 0, format: 'atc-v3', uts: atcV3ToUTS(cred), issues, warnings, verified_by: { algorithm: 'Ed25519 (RFC 8032)', trust_anchor: trustAnchorId, canonicalization: 'RFC 8785 JCS' } };
 }
 
 // ============================================================================
@@ -497,12 +636,27 @@ function verifyW3CVC(vc, caKey) {
 // JWT ADAPTER (new — RS256/ES256/EdDSA)
 // ============================================================================
 function jwtToUTS(payload) {
-  // Parse JWT (without verification — for translation only)
-  const jwt = typeof payload === 'string' ? payload : payload.jwt;
-  const parts = jwt.split('.');
-  if (parts.length !== 3) return null;
-  const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
-  const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+  // FIX 2026-09-08: accepts three input shapes without crashing —
+  //   (a) a JWT string "header.claims.sig"
+  //   (b) { jwt: "header.claims.sig", ... }
+  //   (c) a raw claims object { iss, sub, exp, ... } (treated as decoded claims)
+  // Previously: payload.jwt on a claims object was undefined → undefined.split('.')
+  // crashed the serverless function (FUNCTION_INVOCATION_FAILED).
+  const jwt = typeof payload === 'string' ? payload : payload?.jwt;
+  let header, claims;
+  if (typeof jwt === 'string' && jwt.split('.').length === 3) {
+    try {
+      header = JSON.parse(Buffer.from(jwt.split('.')[0], 'base64url').toString());
+      claims = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString());
+    } catch {
+      return null; // malformed base64url segments
+    }
+  } else if (payload && typeof payload === 'object' && (payload.iss !== undefined || payload.sub !== undefined)) {
+    header = { alg: payload.alg || 'EdDSA', typ: 'JWT' };
+    claims = payload;
+  } else {
+    return null; // no usable JWT input
+  }
   return {
     uts_version: '2.0.0',
     subject: { id: claims.sub || 'unknown', name: claims.sub || 'JWT Subject', type: 'agent' },
@@ -523,16 +677,33 @@ function utsToJWT(uts) {
 }
 
 function verifyJWT(payload, caKey) {
-  const jwt = typeof payload === 'string' ? payload : payload.jwt;
-  const parts = jwt.split('.');
-  if (parts.length !== 3) return { valid: false, format: 'jwt', issues: ['invalid JWT format'], warnings: [] };
-  const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());
-  const claims = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+  // FIX 2026-09-08: same three-shape guard as jwtToUTS (no crash on claims objects).
+  const jwt = typeof payload === 'string' ? payload : payload?.jwt;
+  let header, claims, isRawClaims = false;
+  if (typeof jwt === 'string' && jwt.split('.').length === 3) {
+    try {
+      header = JSON.parse(Buffer.from(jwt.split('.')[0], 'base64url').toString());
+      claims = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64url').toString());
+    } catch (e) {
+      return { valid: false, format: 'jwt', issues: [`malformed JWT: ${e.message}`], warnings: [] };
+    }
+  } else if (payload && typeof payload === 'object' && (payload.iss !== undefined || payload.sub !== undefined)) {
+    isRawClaims = true;
+    header = { alg: payload.alg || 'EdDSA', typ: 'JWT' };
+    claims = payload;
+  } else {
+    return { valid: false, format: 'jwt', issues: ['invalid JWT format'], warnings: [] };
+  }
   const issues = [];
+  const warnings = [];
   if (header.alg === 'none') issues.push('alg=none forbidden');
   if (header.alg === 'HS256') issues.push('HS256 not supported');
   if (claims.exp && Date.now() / 1000 > claims.exp) issues.push('expired');
-  return { valid: issues.length === 0, format: 'jwt', uts: jwtToUTS(payload), issues, warnings: [] };
+  if (isRawClaims) issues.push('unsigned claims object — no JWT signature segment (fail-closed: signature cannot be checked)');
+  // Honesty: the playground does structural JWT checks only (verifying a JWT
+  // signature requires fetching the issuer's JWKS/public key). Say so.
+  if (!isRawClaims) warnings.push('JWT signature NOT cryptographically verified here — structural checks only (real verification needs the issuer JWKS: use @marketnow/trust-core)');
+  return { valid: issues.length === 0, format: 'jwt', uts: jwtToUTS(payload), issues, warnings };
 }
 
 // ============================================================================
@@ -791,7 +962,75 @@ function verifyMCP(payload, caKey) {
   return { valid: issues.length === 0, format: 'mcp-card', uts, issues, warnings: uts.warnings };
 }
 
+// ── Stage breakdown for the Verify Playground UI ─────────────────────
+// Derives a 12-stage (PARSE → … → DECISION) view from the format-specific
+// verification result. Additive enrichment only — does not change any
+// existing field of the response.
+function buildStageBreakdown(detected, result) {
+  const issues = result.issues || [];
+  const warnings = result.warnings || [];
+  const uts = result.uts;
+  const detectedFmt = detected.format || result.format || 'unknown';
+  const hasIssue = (re) => issues.some((i) => re.test(String(i)));
+  const hasWarn = (re) => warnings.some((w) => re.test(String(w)));
+
+  const cryptoFailed = hasIssue(/signature|proof|alg=none|HS256|Ed25519|anchor|crypto/i);
+  const cryptoWarned = hasWarn(/signature|proof|no registry|core/i);
+  const lifecycleFailed = hasIssue(/expired|revoked/i);
+  const schemaFailed = !cryptoFailed && !lifecycleFailed && hasIssue(/missing|wrong|invalid|malformed|unsupported|schema|structure|not a PEM|format/i);
+  const detectedOk = !!detectedFmt && detectedFmt !== 'unknown';
+
+  const issuer = uts?.trust?.assessor || 'unknown';
+  const evidenceCount = Array.isArray(uts?.trust?.evidence) ? uts.trust.evidence.length : 0;
+  const trustScore = uts?.trust?.score;
+  const hasExp = !!(uts?.lifecycle?.expires_at);
+
+  const st = (name, status, detail) => ({ name, status, detail: String(detail) });
+
+  const unknownFmt = !detectedFmt || detectedFmt === 'unknown';
+
+  return [
+    st('PARSE', 'PASS', 'Payload parsed as JSON'),
+    st('DETECT', detectedOk ? 'PASS' : 'FAIL', detectedOk
+      ? `Format detected: ${detectedFmt} (confidence ${(detected.confidence * 100).toFixed(0)}%)`
+      : 'Could not detect format'),
+    st('SCHEMA', unknownFmt ? 'FAIL' : schemaFailed ? 'FAIL' : 'PASS', unknownFmt
+      ? 'No adapter matched — schema cannot be checked'
+      : schemaFailed ? issues.join('; ') : 'Structure matches the expected schema for ' + detectedFmt),
+    st('CRYPTO', unknownFmt ? 'FAIL' : cryptoFailed ? 'FAIL' : cryptoWarned ? 'WARN' : 'PASS', unknownFmt
+      ? 'No crypto check possible — format unknown (fail-closed)'
+      : cryptoFailed
+      ? issues.filter((i) => /signature|proof|alg=none|HS256|Ed25519|anchor|crypto/i.test(String(i))).join('; ')
+      : cryptoWarned ? 'No verifiable signature on this credential (external format — structural check only)'
+      : detectedFmt === 'atc-v3' ? 'Ed25519 signature verified (RFC 8032) over RFC 8785 JCS canonical bytes'
+      : `Signature structure OK for ${detectedFmt} (cryptographic verify available via @marketnow/trust-core)`),
+    st('ISSUER', 'PASS', `Issuer: ${issuer}`),
+    st('KEY_BINDING', uts?.identity?.key_id ? 'PASS' : 'WARN', uts?.identity?.key_id ? `Key ID: ${uts.identity.key_id}` : 'No key ID declared'),
+    st('POP', 'SKIPPED', 'Proof-of-Possession needs an interactive nonce challenge (anti-replay) — not applicable to a pasted credential'),
+    st('PROVENANCE', uts?.provenance?.source ? 'PASS' : 'WARN', `Source: ${uts?.provenance?.source || 'unknown'}`),
+    st('LIFECYCLE', lifecycleFailed ? 'FAIL' : hasExp ? 'PASS' : 'WARN', lifecycleFailed
+      ? issues.filter((i) => /expired|revoked/i.test(String(i))).join('; ')
+      : hasExp ? `Valid until ${uts.lifecycle.expires_at}` : 'No expiration declared (WARN: max_ttl policy would apply)'),
+    st('EVIDENCE', evidenceCount > 0 ? 'PASS' : 'WARN', evidenceCount > 0 ? `${evidenceCount} evidence entr${evidenceCount === 1 ? 'y' : 'ies'} attached` : 'No evidence entries attached'),
+    st('POLICY', 'PASS', 'Fail-closed policy: any FAIL stage forces DENY'),
+    st('DECISION', result.valid ? 'PASS' : 'FAIL', result.valid
+      ? 'PERMIT — credential accepted (trust score: ' + (trustScore !== undefined ? trustScore : 'n/a') + ')'
+      : 'DENY — golden rule: UNKNOWN = DENY, ERROR = DENY, EXPIRED = DENY, REVOKED = DENY'),
+  ];
+}
+
 // ── Vercel handler wrapper ──
 export default async function handler(req, res) {
-  return handleTrust(req, res);
+  try {
+    return await handleTrust(req, res);
+  } catch (err) {
+    // FIX 2026-09-08: runtime errors become clean JSON 500s (never
+    // FUNCTION_INVOCATION_FAILED) so client tools can display them.
+    return res.status(500).json({
+      error: 'internal_error',
+      message: String(err && err.message ? err.message : err),
+      endpoint: '/api/trust',
+      hint: 'Report at https://github.com/alicelabs-llc/universal-trust-adapter/issues',
+    });
+  }
 }
