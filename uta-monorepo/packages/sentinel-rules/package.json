@@ -1,0 +1,46 @@
+{
+  "name": "@marketnow/sentinel-rules",
+  "version": "1.1.0",
+  "description": "29 security rules for MCP servers & AI agents - tool poisoning, prompt injection, exfiltration, attack chains, stale-trust caching. Ships semgrep ruleset + zero-dependency lite scanner with registry-tarball mode (--no-skip scans dist/ of extracted npm/PyPI tarballs).",
+  "bin": {
+    "sentinel-scan": "bin/sentinel-scan.mjs"
+  },
+  "files": [
+    "bin",
+    "rules",
+    "README.md",
+    "LICENSE-AL-1.0",
+    "NOTICE"
+  ],
+  "keywords": [
+    "semgrep",
+    "sast",
+    "security",
+    "mcp",
+    "model-context-protocol",
+    "tool-poisoning",
+    "prompt-injection",
+    "agent-security",
+    "static-analysis",
+    "linter",
+    "supply-chain-security",
+    "security-scanner",
+    "code-scanner",
+    "npm",
+    "vulnerability-scanner"
+  ],
+  "author": "AliceLabs LLC <info@alicelabs.site>",
+  "license": "AL-1.0",
+  "homepage": "https://www.marketnow.site",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alicelabs-llc/universal-trust-adapter.git",
+    "directory": "uta-monorepo/packages/sentinel-rules"
+  },
+  "bugs": {
+    "url": "https://github.com/alicelabs-llc/universal-trust-adapter/issues"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

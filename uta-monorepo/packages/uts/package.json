@@ -1,9 +1,37 @@
 {
   "name": "@marketnow/uts",
-  "version": "2.0.1",
-  "description": "Universal Trust Schema v2 \u2014 canonical trust data model",
+  "version": "2.0.2",
+  "description": "Universal Trust Schema (UTS) v2 - canonical trust data model for AI agents: identity, attestations, capabilities, policies, provenance, lifecycle and assessment, with a machine-checkable JSON Schema. Zero dependencies.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE-AL-1.0"
+  ],
+  "keywords": [
+    "trust",
+    "agent-trust",
+    "trust-schema",
+    "universal-trust-schema",
+    "uts",
+    "json-schema",
+    "data-model",
+    "ai-agents",
+    "mcp",
+    "model-context-protocol",
+    "attestations",
+    "agent-verification",
+    "agent-identity",
+    "verifiable-data",
+    "trust-adapter",
+    "marketnow"
+  ],
+  "author": "AliceLabs LLC <info@alicelabs.site>",
+  "license": "AL-1.0",
+  "engines": {
+    "node": ">=18"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/alicelabs-llc/universal-trust-adapter.git",
