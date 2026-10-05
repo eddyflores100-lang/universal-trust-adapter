@@ -168,7 +168,7 @@ npx marketnow-audit bit.ly        # domain scam-check + ATC + OCSP, CI exit code
 | Metric | Value |
 |---|---|
 | NPM packages | 12 (combined last-week downloads: 4,901+) |
-| Conformance (live) | 14 public vectors · 24 checks + 10 mutants · v1.3.5 (npm-synced) |
+| Conformance (live) | 14 public vectors · 24 checks + 10 mutants · v1.4.0 (npm-synced) |
 | Transparency anchors | 3 Rekor log entries (verify-rekor.mjs, 9 checks) |
 | CA key rotation | exercised 2026-09-08 (`mn-ca-002` → `mn-ca-003`) — [postmortem](https://marketnow.site/security/incidents/2026-09-08) |
 | Test vectors (ATC/1.0) | 5 frozen + manifest — [MARKETNOW repo](https://github.com/alicelabs-llc/MARKETNOW/tree/master/docs/atc-spec/test-vectors) |
@@ -189,7 +189,7 @@ npx marketnow-audit bit.ly        # domain scam-check + ATC + OCSP, CI exit code
 | [`@marketnow/trust-adapters`](https://www.npmjs.com/package/@marketnow/trust-adapters) | 1.0.4 | 9 format adapters (X509 exported; self-contained, zero deps) | 282/wk |
 | [`@marketnow/trust-gateway`](https://www.npmjs.com/package/@marketnow/trust-gateway) | 1.0.5 | MCP middleware gateway + ReceiptStore/ReceiptGenerator exported (self-contained, zero deps) | 307/wk |
 | [`@marketnow/cline-trust-plugin`](https://www.npmjs.com/package/@marketnow/cline-trust-plugin) | 1.1.2 | Cline interceptor: revocation gate + TFP tool-surface pinning | 346/wk |
-| [`@marketnow/uta-conformance`](https://www.npmjs.com/package/@marketnow/uta-conformance) | 1.3.5 | 14 signed vectors + reference scorer + card generator — `npx @marketnow/uta-conformance` | 307/wk |
+| [`@marketnow/uta-conformance`](https://www.npmjs.com/package/@marketnow/uta-conformance) | 1.4.0 | 14 signed vectors + reference scorer + card generator — `npx @marketnow/uta-conformance` | 307/wk |
 | [`@marketnow/sentinel-rules`](https://www.npmjs.com/package/@marketnow/sentinel-rules) | 1.1.2 | 29 MCP security rules: semgrep config + zero-dep lite scanner — `npx @marketnow/sentinel-rules --path .` | 471/wk |
 | [`@marketnow/trust-mcp-middleware`](https://www.npmjs.com/package/@marketnow/trust-mcp-middleware) | 1.0.2 | MCP `tools/call` wrapper: credential enforcement + signed audit receipts | 319/wk |
 | [`@marketnow/trust-observability`](https://www.npmjs.com/package/@marketnow/trust-observability) | 1.0.3 | Zero-dep observability: structured logging, tracing, Prometheus metrics | 461/wk |
